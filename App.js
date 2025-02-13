@@ -18,8 +18,7 @@ app.get("/", (req, res) => {
 	res.send("Hello World!");
 });
 
-mongoose.connect(MongodbURL)
-.then(()=>{
+mongoose.connect(MongodbURL).then(()=>{
   console.log("connected to mongodb")
   app.listen(port,() => {
     console.log(`Example app listening on port ${port}`)
