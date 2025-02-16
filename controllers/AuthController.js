@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 const generateToken = require("../Utils/jwtGenerate");
 dotenv.config();
 
-const userSignUp = async (req, res) => {
+const userSignUp = async (req, res, next) => {
 	try {
 		const { name, email, password } = req.body;
 		const existingUser = await User.findOne({ email });
@@ -24,16 +24,15 @@ const userSignUp = async (req, res) => {
 			updatedAt: newUser.updatedAt,
 		};
 
-		res
-			.status(201)
-			.json({
-				message: "User registered successfully",
-				token,
-				user: userWithoutPassword,
-			});
+		res.status(201).json({
+			message: "User registered successfully",
+			token,
+			user: userWithoutPassword,
+		});
 	} catch (error) {
-		console.log(error.message);
-		res.status(500).json({ message: "Server error", error: error.message });
+		next(error);
+		// console.log(error.message);
+		// res.status(500).json({ message: "Server error", error: error.message });
 	}
 };
 
@@ -52,13 +51,11 @@ const userLogIn = async (req, res) => {
 			updatedAt: user.updatedAt,
 		};
 
-		res
-			.status(200)
-			.json({
-				message: "User logged in successfully",
-				token,
-				user: userWithoutPassword,
-			});
+		res.status(200).json({
+			message: "User logged in successfully",
+			token,
+			user: userWithoutPassword,
+		});
 	} catch (e) {
 		console.log(e);
 		res.status(500).json({ message: "Server error", error: e.message });
