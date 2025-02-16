@@ -1,6 +1,8 @@
 const User = require("../models/UserModel");
 const dotenv = require("dotenv");
 const generateToken = require("../Utils/jwtGenerate");
+const randomString = require("randomstring");
+const nodemailer = require("nodemailer");
 dotenv.config();
 
 const userSignUp = async (req, res, next) => {
@@ -31,8 +33,6 @@ const userSignUp = async (req, res, next) => {
 		});
 	} catch (error) {
 		next(error);
-		// console.log(error.message);
-		// res.status(500).json({ message: "Server error", error: error.message });
 	}
 };
 
@@ -62,4 +62,80 @@ const userLogIn = async (req, res) => {
 	}
 };
 
-module.exports = { userSignUp, userLogIn };
+const OTPCache = {};
+const generateOtp = async (req, res) => {
+	return (OTP = randomString.generate({ length: 6, charset: "numeric" }));
+};
+
+const sendOTP = (email, otp) => {
+	const mailOptions = {
+		from: "emmaeluwa2021@gmail.com",
+		to: email,
+		subject: "OTP Verification Code",
+		text: `Your OTP is: ${otp}`,
+	};
+
+	let Transporter = nodemailer.createTransport({
+		service: "Gmail",
+		auth: {
+			user: "emmaeluwa2021@gmail.com",
+			pass: "hnsl yatc eplg yisx",
+		},
+		tls: {
+			rejectUnauthorized: false,
+		},
+	});
+
+	Transporter.sendMail(mailOptions, (error, info) => {
+		if (error) {
+			console.log(error);
+		} else {
+			console.log("Email sent: ", info.response);
+		}
+	});
+};
+
+const emailVerificationCode = async (req, res, next) => {
+	try {
+		const { email } = req.body;
+		const otp = await generateOtp();
+		const expiryDate = Date.now() + 2 * 60 * 1000;
+
+		OTPCache[email] = { otp, expiryDate };
+		sendOTP(email, otp);
+		console.log("Email verified: ", email);
+		res.status(200).json({ message: "OTP sent successfully", otp });
+	} catch (error) {
+		console.log(error);
+		next(error);
+	}
+};
+
+const verifyOTP = async (req, res, next) => {
+	try {
+		const { email, otp } = req.body;
+		console.log(OTPCache);
+
+		if (!OTPCache.hasOwnProperty(email)) {
+			return res.status(400).json({ message: "OTP not found for this email" });
+		}
+		const { otp: storedOtp, expiryDate } = OTPCache[email];
+		if (Date.now() > expiryDate) {
+			delete OTPCache[email];
+			return res
+				.status(400)
+				.json({ message: "OTP has expired. Request a new one." });
+		}
+		if (storedOtp.trim() === otp.trim()) {
+			delete OTPCache[email];
+			return res.status(200).json({ message: "OTP verified successfully" });
+		} else {
+			return res.status(400).json({ message: "Invalid OTP" });
+		}
+	} catch (error) {
+		console.log(error);
+		next(error);
+	}
+};
+
+module.exports = { userSignUp, userLogIn, emailVerificationCode, verifyOTP };
