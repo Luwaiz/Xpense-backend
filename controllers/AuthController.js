@@ -69,10 +69,10 @@ const generateOtp = async () => {
 
 const sendOTP = (email, otp) => {
 	const mailOptions = {
-		from: "emmaeluwa2021@gmail.com",
+		from: "Xpense",
 		to: email,
 		subject: "OTP Verification Code",
-		text: `Your OTP is: ${otp}`,
+		text: `Your OTP is: ${otp}`, 
 	};
 
 	let Transporter = nodemailer.createTransport({

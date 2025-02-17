@@ -5,19 +5,19 @@ const { isEmail } = require("validator");
 const UserSchema = mongoose.Schema(
 	{
 		name: {
-			type: "string",
+			type: String,
 			required: true,
 			trim: true,
 		},
 		email: {
-			type: "string",
+			type: String,
 			required: true,
 			unique: true,
 			trim: true,
 			validate: [isEmail, "Please enter a valid email"],
 		},
 		password: {
-			type: "string",
+			type: String,
 			required: true,
 			minlength: [8, "Password must be at least 8 characters long"],
 		},
