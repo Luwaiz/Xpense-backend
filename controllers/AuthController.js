@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const generateToken = require("../Utils/jwtGenerate");
 const randomString = require("randomstring");
 const nodemailer = require("nodemailer");
+const OTPModel = require("../models/OTPModel");
 dotenv.config();
 
 const userSignUp = async (req, res, next) => {
@@ -62,8 +63,7 @@ const userLogIn = async (req, res) => {
 	}
 };
 
-const OTPCache = {};
-const generateOtp = async (req, res) => {
+const generateOtp = async () => {
 	return (OTP = randomString.generate({ length: 6, charset: "numeric" }));
 };
 
@@ -99,11 +99,12 @@ const emailVerificationCode = async (req, res, next) => {
 	try {
 		const { email } = req.body;
 		const otp = await generateOtp();
-		const expiryDate = Date.now() + 2 * 60 * 1000;
+		const expiryDate = Date.now() + 5 * 60 * 1000;
+		await OTPModel.findOneAndDelete({ email });
 
-		OTPCache[email] = { otp, expiryDate };
+		await OTPModel.create({ otp, email, expiryDate });
 		sendOTP(email, otp);
-		console.log("Email verified: ", email);
+
 		res.status(200).json({ message: "OTP sent successfully", otp });
 	} catch (error) {
 		console.log(error);
@@ -114,20 +115,18 @@ const emailVerificationCode = async (req, res, next) => {
 const verifyOTP = async (req, res, next) => {
 	try {
 		const { email, otp } = req.body;
-		console.log(OTPCache);
-
-		if (!OTPCache.hasOwnProperty(email)) {
+		const OtpRecord = await OTPModel.findOne({ email });
+		if (!OtpRecord) {
 			return res.status(400).json({ message: "OTP not found for this email" });
 		}
-		const { otp: storedOtp, expiryDate } = OTPCache[email];
-		if (Date.now() > expiryDate) {
-			delete OTPCache[email];
+		if (Date.now() > OtpRecord.expiryDate) {
+			await OTPModel.deleteOne({ email });
 			return res
 				.status(400)
 				.json({ message: "OTP has expired. Request a new one." });
 		}
-		if (storedOtp.trim() === otp.trim()) {
-			delete OTPCache[email];
+		if (OtpRecord.otp.trim() === otp.trim()) {
+			await OTPModel.deleteOne({ email });
 			return res.status(200).json({ message: "OTP verified successfully" });
 		} else {
 			return res.status(400).json({ message: "Invalid OTP" });
