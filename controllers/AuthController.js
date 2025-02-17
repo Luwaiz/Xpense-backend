@@ -1,6 +1,9 @@
 const User = require("../models/UserModel");
 const dotenv = require("dotenv");
 const generateToken = require("../Utils/jwtGenerate");
+const randomString = require("randomstring");
+const nodemailer = require("nodemailer");
+const OTPModel = require("../models/OTPModel");
 dotenv.config();
 
 const userSignUp = async (req, res, next) => {
@@ -31,8 +34,6 @@ const userSignUp = async (req, res, next) => {
 		});
 	} catch (error) {
 		next(error);
-		// console.log(error.message);
-		// res.status(500).json({ message: "Server error", error: error.message });
 	}
 };
 
@@ -62,4 +63,78 @@ const userLogIn = async (req, res) => {
 	}
 };
 
-module.exports = { userSignUp, userLogIn };
+const generateOtp = async () => {
+	return (OTP = randomString.generate({ length: 6, charset: "numeric" }));
+};
+
+const sendOTP = (email, otp) => {
+	const mailOptions = {
+		from: "emmaeluwa2021@gmail.com",
+		to: email,
+		subject: "OTP Verification Code",
+		text: `Your OTP is: ${otp}`,
+	};
+
+	let Transporter = nodemailer.createTransport({
+		service: "Gmail",
+		auth: {
+			user: "emmaeluwa2021@gmail.com",
+			pass: "hnsl yatc eplg yisx",
+		},
+		tls: {
+			rejectUnauthorized: false,
+		},
+	});
+
+	Transporter.sendMail(mailOptions, (error, info) => {
+		if (error) {
+			console.log(error);
+		} else {
+			console.log("Email sent: ", info.response);
+		}
+	});
+};
+
+const emailVerificationCode = async (req, res, next) => {
+	try {
+		const { email } = req.body;
+		const otp = await generateOtp();
+		const expiryDate = Date.now() + 5 * 60 * 1000;
+		await OTPModel.findOneAndDelete({ email });
+
+		await OTPModel.create({ otp, email, expiryDate });
+		sendOTP(email, otp);
+
+		res.status(200).json({ message: "OTP sent successfully", otp });
+	} catch (error) {
+		console.log(error);
+		next(error);
+	}
+};
+
+const verifyOTP = async (req, res, next) => {
+	try {
+		const { email, otp } = req.body;
+		const OtpRecord = await OTPModel.findOne({ email });
+		if (!OtpRecord) {
+			return res.status(400).json({ message: "OTP not found for this email" });
+		}
+		if (Date.now() > OtpRecord.expiryDate) {
+			await OTPModel.deleteOne({ email });
+			return res
+				.status(400)
+				.json({ message: "OTP has expired. Request a new one." });
+		}
+		if (OtpRecord.otp.trim() === otp.trim()) {
+			await OTPModel.deleteOne({ email });
+			return res.status(200).json({ message: "OTP verified successfully" });
+		} else {
+			return res.status(400).json({ message: "Invalid OTP" });
+		}
+	} catch (error) {
+		console.log(error);
+		next(error);
+	}
+};
+
+module.exports = { userSignUp, userLogIn, emailVerificationCode, verifyOTP };
