@@ -12,10 +12,10 @@ const port = process.env.PORT || 3000;
 const MongodbURL = process.env.MONGO_URL;
 
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 app.use("/api/auth", AuthRoute);
 app.use("/api/expense", ExpenseRoute);
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(errorHandler);
 
 app.get("/", (req, res) => {
