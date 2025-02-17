@@ -1,8 +1,9 @@
 const express = require("express");
-const AuthRoute = require("./routes/AuthRoute");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const AuthRoute = require("./routes/AuthRoute");
+const ExpenseRoute = require("./routes/ExpenseRoute");
 const errorHandler = require("./middlewares/errorHandler");
 dotenv.config();
 
@@ -13,11 +14,12 @@ const MongodbURL = process.env.MONGO_URL;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use("/api", AuthRoute);
+app.use("/api/auth", AuthRoute);
+app.use("/api/expense", ExpenseRoute);
 app.use(errorHandler);
 
 app.get("/", (req, res) => {
-	res.send("Hello World!");
+	res.send("Xpense!");
 });
 
 mongoose
