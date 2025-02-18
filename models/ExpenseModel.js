@@ -7,23 +7,23 @@ const ExpenseSchema =  mongoose.Schema({
         required: true
     },
     name: {
-        type: String,
+        type: "string",
         required: true
     },
     amount: {
-        type: Number,
+        type: "number",
         required: true
     },
     category: {
-        type: String,
+        type: "string",
         required: true
     },
     description: {
-        type: String,
+        type: "string",
         required: false
     },
     date: {
-        type: Date,
+        type: "date",
         default: Date.now
     }
 })

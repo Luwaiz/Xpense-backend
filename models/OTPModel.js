@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 
 const otpSchema = mongoose.Schema({
-	email: { type: String, required: true, unique: true },
-	otp: { type: String, required: true },
-	expiryDate: { type: Date, required: true },
+	email: { type: "string", required: true, unique: true },
+	otp: { type: "string", required: true },
+	expiryDate: { type: "date", required: true },
 });
 
 const OTPModel = mongoose.model("OTP", otpSchema);
