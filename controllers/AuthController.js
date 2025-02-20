@@ -41,7 +41,6 @@ const userLogIn = async (req, res) => {
 	try {
 		const { email, password } = req.body;
 		const user = await User.login(email, password);
-		console.log("User", user);
 
 		const token = generateToken(user._id, user.email);
 		const userWithoutPassword = {
