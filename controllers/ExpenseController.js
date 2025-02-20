@@ -43,4 +43,15 @@ const getExpenses = async (req, res, next) => {
         res.status(500).json({ message: "Server error" });
     }
 }
-module.exports = {createExpense, getExpenses};
+
+const getRecentExpenses = async (req, res) => {
+	try {
+        const userId = req.user.userId;
+        const recentExpenses = await ExpenseModel.find({ userId }).sort({ date: -1 }).limit(7);
+        res.status(200).json(recentExpenses);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error" });
+    }
+}
+module.exports = {createExpense, getExpenses, getRecentExpenses};
