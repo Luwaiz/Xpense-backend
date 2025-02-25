@@ -1,3 +1,4 @@
+const BudgetModel = require("../models/BudgetModel");
 const ExpenseModel = require("../models/ExpenseModel");
 
 const createExpense = async (req, res, next) => {
@@ -22,6 +23,13 @@ const createExpense = async (req, res, next) => {
 		});
 
 		await newExpense.save();
+		const budget = await BudgetModel.findOne({ userId, category });
+
+        if (budget) {
+            budget.spent += amount;
+            await budget.save();
+        }
+
 
 		res
 			.status(201)

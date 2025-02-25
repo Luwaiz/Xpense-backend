@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const AuthRoute = require("./routes/AuthRoute");
 const ExpenseRoute = require("./routes/ExpenseRoute");
+const BudgetRoute = require("./routes/BudgetRoute");
 const errorHandler = require("./middlewares/errorHandler");
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use("/api/auth", AuthRoute);
 app.use("/api/expense", ExpenseRoute);
+app.use("/api/budget", BudgetRoute);
 app.use(errorHandler);
 
 app.get("/", (req, res) => {
