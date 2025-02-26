@@ -2,8 +2,6 @@ const BudgetModel = require("../models/BudgetModel");
 const ExpenseModel = require("../models/ExpenseModel");
 
 const createExpense = async (req, res, next) => {
-	console.log(req.user);
-
 	try {
 		const { name, amount, category, description } = req.body;
 		const userId = req.user.userId;
@@ -13,27 +11,35 @@ const createExpense = async (req, res, next) => {
 				.status(400)
 				.json({ message: "Please provide all required fields." });
 		}
+		const expenseAmount = parseFloat(amount);
 
 		const newExpense = new ExpenseModel({
 			userId,
 			name,
-			amount,
+			amount: expenseAmount,
 			category,
 			description,
 		});
 
 		await newExpense.save();
-		const budget = await BudgetModel.findOne({ userId, category });
 
-        if (budget) {
-            budget.spent += amount;
-            await budget.save();
-        }
+		// Find the budget by userId and category
+		let budget = await BudgetModel.findOne({ userId, category });
 
+		if (budget) {
+			console.log(`Before Update: ${budget.spent}`);
+			budget.spent += expenseAmount;
+			console.log(`After Update: ${budget.spent}`);
+			await budget.save();
+		} else {
+			console.warn(`Budget not found for category: ${category}`);
+		}
 
-		res
-			.status(201)
-			.json({ message: "Expense created successfully.", expense: newExpense });
+		res.status(201).json({
+			message: "Expense created successfully.",
+			expense: newExpense,
+			updatedBudget: budget,
+		});
 	} catch (error) {
 		next(error);
 	}
@@ -92,7 +98,7 @@ const getWeeklyExpenses = async (req, res) => {
 			console.log(day);
 			weeklyData[day] += expense.amount;
 		});
-		console.log(expenses)
+		console.log(expenses);
 
 		const formattedData = Object.keys(weeklyData).map((day) => ({
 			day,
@@ -138,7 +144,9 @@ const getMonthlyExpenses = async (req, res) => {
 
 		// Loop through expenses and sum up amounts for each month
 		expenses.forEach((expense) => {
-			const month = new Date(expense.date).toLocaleString("en-US", { month: "long" });
+			const month = new Date(expense.date).toLocaleString("en-US", {
+				month: "long",
+			});
 			monthlyData[month] += expense.amount;
 		});
 
@@ -155,4 +163,10 @@ const getMonthlyExpenses = async (req, res) => {
 	}
 };
 
-module.exports = { createExpense, getExpenses, getRecentExpenses,getWeeklyExpenses, getMonthlyExpenses };
+module.exports = {
+	createExpense,
+	getExpenses,
+	getRecentExpenses,
+	getWeeklyExpenses,
+	getMonthlyExpenses,
+};
