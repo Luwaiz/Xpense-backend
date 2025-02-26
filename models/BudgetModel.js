@@ -4,19 +4,27 @@ const BudgetSchema = mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
+        required: true
     },
-    category: {
+    name: {
         type: "string",
-        required: true,
+        required: true
     },
     limit: {
         type: "number",
-        required: true,
+        required: true
     },
     spent: {
         type: "number",
-        default: 0, // Tracks how much has been spent
+        default: 0
+    },
+    startDate: {
+        type: "date",
+        required: true
+    },
+    endDate: {
+        type: "date",
+        required: true
     }
 });
 

@@ -3,40 +3,28 @@ const ExpenseModel = require("../models/ExpenseModel");
 
 const createBudget = async (req, res) => {
 	try {
-		const { category, limit } = req.body;
-		const userId = req.user.userId;
+        const { name, limit, startDate, endDate } = req.body;
+        const userId = req.user.userId;
 
-		if (!category || !limit) {
-			return res
-				.status(400)
-				.json({ message: "Category and limit are required." });
-		}
+        if (!name || !limit || !startDate || !endDate) {
+            return res.status(400).json({ message: "All fields are required." });
+        }
 
-		// Check if budget for the category already exists
-		const existingBudget = await BudgetModel.findOne({ userId, category });
+        const newBudget = new BudgetModel({
+            userId,
+            name,
+            limit,
+            spent: 0,
+            startDate,
+            endDate
+        });
 
-		if (existingBudget) {
-			return res
-				.status(400)
-				.json({ message: "Budget for this category already exists." });
-		}
+        await newBudget.save();
 
-		// Create new budget
-		const newBudget = new BudgetModel({
-			userId,
-			category,
-			limit,
-			spent: 0,
-		});
-
-		await newBudget.save();
-
-		res
-			.status(201)
-			.json({ message: "Budget created successfully.", budget: newBudget });
-	} catch (error) {
-		res.status(500).json({ message: "Error creating budget", error });
-	}
+        res.status(201).json({ message: "Budget created successfully.", budget: newBudget });
+    } catch (error) {
+        next(error);
+    }
 };
 
 const getBudgets = async (req, res) => {
@@ -56,23 +44,15 @@ const getBudgets = async (req, res) => {
 
 const getExpensesByCategory = async (req, res) => {
 	try {
-		const userId = req.user.userId;
-		const { category } = req.params; // Category is passed as a URL parameter
+        const { budgetId } = req.params;
+        const userId = req.user.userId;
 
-		const expenses = await ExpenseModel.find({ userId, category }).sort({
-			date: -1,
-		});
+        const expenses = await ExpenseModel.find({ userId, budgetId }).sort({ date: -1 });
 
-		if (!expenses.length) {
-			return res
-				.status(404)
-				.json({ message: `No expenses found for ${category}` });
-		}
-
-		res.status(200).json(expenses);
-	} catch (error) {
-		res.status(500).json({ message: "Error fetching expenses", error });
-	}
+        res.status(200).json(expenses);
+    } catch (error) {
+        next(error);
+    }
 };
 
 module.exports = { getBudgets, getExpensesByCategory, createBudget };

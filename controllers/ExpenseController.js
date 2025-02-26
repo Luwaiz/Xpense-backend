@@ -3,14 +3,15 @@ const ExpenseModel = require("../models/ExpenseModel");
 
 const createExpense = async (req, res, next) => {
 	try {
-		const { name, amount, category, description } = req.body;
+		const { name, amount, category, description, date, budgetId } = req.body;
 		const userId = req.user.userId;
 
-		if (!name || !amount || !category) {
+		if (!name || !amount || !category || !date) {
 			return res
 				.status(400)
-				.json({ message: "Please provide all required fields." });
+				.json({ message: "All required fields must be provided." });
 		}
+
 		const expenseAmount = parseFloat(amount);
 
 		const newExpense = new ExpenseModel({
@@ -19,27 +20,26 @@ const createExpense = async (req, res, next) => {
 			amount: expenseAmount,
 			category,
 			description,
+			date: new Date(date),
+			budgetId: budgetId || null,
 		});
 
 		await newExpense.save();
 
-		// Find the budget by userId and category
-		let budget = await BudgetModel.findOne({ userId, category });
+		if (budgetId) {
+			let budget = await BudgetModel.findOne({ _id: budgetId, userId });
 
-		if (budget) {
-			console.log(`Before Update: ${budget.spent}`);
-			budget.spent += expenseAmount;
-			console.log(`After Update: ${budget.spent}`);
-			await budget.save();
-		} else {
-			console.warn(`Budget not found for category: ${category}`);
+			if (budget) {
+				budget.spent += expenseAmount;
+				await budget.save();
+			} else {
+				console.warn(`Budget not found with ID: ${budgetId}`);
+			}
 		}
 
-		res.status(201).json({
-			message: "Expense created successfully.",
-			expense: newExpense,
-			updatedBudget: budget,
-		});
+		res
+			.status(201)
+			.json({ message: "Expense created successfully.", expense: newExpense });
 	} catch (error) {
 		next(error);
 	}
