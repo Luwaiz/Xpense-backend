@@ -10,7 +10,7 @@ const router = express.Router();
 router.post("/createBudget", authMiddleware, createBudget);
 router.get("/getBudgets", authMiddleware, getBudgets);
 router.get(
-	"/getBudgetCategory/expenses",
+	"/getBudgetCategory/expenses/:budgetId",
 	authMiddleware,
 	getExpensesByCategory
 );
