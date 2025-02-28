@@ -27,6 +27,7 @@ const userSignUp = async (req, res, next) => {
 			updatedAt: newUser.updatedAt,
 		};
 
+
 		res.status(201).json({
 			message: "User registered successfully",
 			token,
@@ -47,9 +48,12 @@ const userLogIn = async (req, res) => {
 			_id: user._id,
 			name: user.name,
 			email: user.email,
-			createdAt: user.createdAt,
+			createdAt: user.createdAt, 
 			updatedAt: user.updatedAt,
 		};
+
+		
+		console.log(userWithoutPassword)
 
 		res.status(200).json({
 			message: "User logged in successfully",
