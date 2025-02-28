@@ -73,42 +73,50 @@ const getRecentExpenses = async (req, res) => {
 const getWeeklyExpenses = async (req, res) => {
 	try {
 		const userId = req.user.userId;
+
+		// Get the start of the week (last 7 days including today)
 		const startOfWeek = new Date();
 		startOfWeek.setDate(startOfWeek.getDate() - 6);
+		startOfWeek.setHours(0, 0, 0, 0);
 
+		// Fetch expenses for the past 7 days
 		const expenses = await ExpenseModel.find({
 			userId,
 			date: { $gte: startOfWeek },
-		});
+		}).sort({ date: 1 }); // Sort by date ascending
 
-		const weeklyData = {
-			Sunday: 0,
-			Monday: 0,
-			Tuesday: 0,
-			Wednesday: 0,
-			Thursday: 0,
-			Friday: 0,
-			Saturday: 0,
-		};
+		// Structure to store grouped expenses
+		const weeklyData = {};
 
 		expenses.forEach((expense) => {
-			const day = new Date(expense.date).toLocaleDateString("en-US", {
+			const expenseDate = new Date(expense.date);
+			const dayName = expenseDate.toLocaleDateString("en-US", {
 				weekday: "long",
 			});
-			console.log(day);
-			weeklyData[day] += expense.amount;
-		});
-		console.log(expenses);
+			const formattedDate = expenseDate.toISOString().split("T")[0]; // YYYY-MM-DD
 
-		const formattedData = Object.keys(weeklyData).map((day) => ({
-			day,
-			amount: weeklyData[day],
-		}));
+			// Initialize the day in weeklyData if not already present
+			if (!weeklyData[dayName]) {
+				weeklyData[dayName] = {
+					day: dayName,
+					date: formattedDate,
+					totalAmount: 0,
+					expenses: [],
+				};
+			}
+
+			// Add to total amount and push the expense details
+			weeklyData[dayName].totalAmount += expense.amount;
+			weeklyData[dayName].expenses.push(expense);
+		});
+
+		// Convert the object into an array for easy frontend usage
+		const formattedData = Object.values(weeklyData);
 
 		res.status(200).json({ weeklyData: formattedData });
 	} catch (err) {
-		res.status(500).json({ message: "Error fetching expenses", err });
-		console.log(err);
+		console.error(err);
+		res.status(500).json({ message: "Error fetching expenses", error: err });
 	}
 };
 
@@ -179,12 +187,11 @@ const getExpenseById = async (req, res, next) => {
 	}
 };
 
-
 module.exports = {
 	createExpense,
 	getExpenses,
 	getRecentExpenses,
 	getWeeklyExpenses,
 	getMonthlyExpenses,
-	getExpenseById
+	getExpenseById,
 };
