@@ -73,50 +73,46 @@ const getRecentExpenses = async (req, res) => {
 const getWeeklyExpenses = async (req, res) => {
 	try {
 		const userId = req.user.userId;
-
-		// Get the start of the week (last 7 days including today)
 		const startOfWeek = new Date();
 		startOfWeek.setDate(startOfWeek.getDate() - 6);
-		startOfWeek.setHours(0, 0, 0, 0);
 
-		// Fetch expenses for the past 7 days
 		const expenses = await ExpenseModel.find({
 			userId,
 			date: { $gte: startOfWeek },
-		}).sort({ date: 1 }); // Sort by date ascending
-
-		// Structure to store grouped expenses
-		const weeklyData = {};
-
-		expenses.forEach((expense) => {
-			const expenseDate = new Date(expense.date);
-			const dayName = expenseDate.toLocaleDateString("en-US", {
-				weekday: "long",
-			});
-			const formattedDate = expenseDate.toISOString().split("T")[0]; // YYYY-MM-DD
-
-			// Initialize the day in weeklyData if not already present
-			if (!weeklyData[dayName]) {
-				weeklyData[dayName] = {
-					day: dayName,
-					date: formattedDate,
-					totalAmount: 0,
-					expenses: [],
-				};
-			}
-
-			// Add to total amount and push the expense details
-			weeklyData[dayName].totalAmount += expense.amount;
-			weeklyData[dayName].expenses.push(expense);
 		});
 
-		// Convert the object into an array for easy frontend usage
-		const formattedData = Object.values(weeklyData);
+		// Initialize an object with all days set to zero
+		const weeklyData = {
+			Sunday: { totalAmount: 0, expenses: [], date: null },
+			Monday: { totalAmount: 0, expenses: [], date: null },
+			Tuesday: { totalAmount: 0, expenses: [], date: null },
+			Wednesday: { totalAmount: 0, expenses: [], date: null },
+			Thursday: { totalAmount: 0, expenses: [], date: null },
+			Friday: { totalAmount: 0, expenses: [], date: null },
+			Saturday: { totalAmount: 0, expenses: [], date: null },
+		};
+
+		expenses.forEach((expense) => {
+			const day = new Date(expense.date).toLocaleDateString("en-US", {
+				weekday: "long",
+			});
+			weeklyData[day].totalAmount += expense.amount;
+			weeklyData[day].expenses.push(expense);
+			weeklyData[day].date = expense.date;
+		});
+
+		// Convert the object into an array
+		const formattedData = Object.keys(weeklyData).map((day) => ({
+			day,
+			totalAmount: weeklyData[day].totalAmount,
+			expenses: weeklyData[day].expenses,
+			date: weeklyData[day].date,
+		}));
 
 		res.status(200).json({ weeklyData: formattedData });
 	} catch (err) {
-		console.error(err);
-		res.status(500).json({ message: "Error fetching expenses", error: err });
+		res.status(500).json({ message: "Error fetching expenses", err });
+		console.log(err);
 	}
 };
 
