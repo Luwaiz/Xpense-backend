@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.post("/createExpense", authMiddleware, createExpense);
 router.get("/getExpenses", authMiddleware, getExpenses);
-router.get("/expense/:expenseId", authMiddleware, getExpenseById);
+router.get("/expense/getExpenseById/:expenseId", authMiddleware, getExpenseById);
 router.get("/recentExpenses", authMiddleware, getRecentExpenses);
 router.get("/weeklyExpenses", authMiddleware, getWeeklyExpenses);
 router.get("/monthlyExpenses", authMiddleware, getMonthlyExpenses);
