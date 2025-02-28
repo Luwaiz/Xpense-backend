@@ -62,7 +62,7 @@ const getRecentExpenses = async (req, res) => {
 		const userId = req.user.userId;
 		const recentExpenses = await ExpenseModel.find({ userId })
 			.sort({ date: -1 })
-			.limit(7);
+			.limit(3);
 		res.status(200).json(recentExpenses);
 	} catch (error) {
 		console.error(error);
@@ -162,6 +162,23 @@ const getMonthlyExpenses = async (req, res) => {
 		console.log(err);
 	}
 };
+const getExpenseById = async (req, res, next) => {
+	try {
+		const { expenseId } = req.params;
+		const userId = req.user.userId; // Ensure the user only accesses their own expenses
+
+		const expense = await ExpenseModel.findOne({ _id: expenseId, userId });
+
+		if (!expense) {
+			return res.status(404).json({ message: "Expense not found" });
+		}
+
+		res.status(200).json(expense);
+	} catch (error) {
+		next(error);
+	}
+};
+
 
 module.exports = {
 	createExpense,
@@ -169,4 +186,5 @@ module.exports = {
 	getRecentExpenses,
 	getWeeklyExpenses,
 	getMonthlyExpenses,
+	getExpenseById
 };
