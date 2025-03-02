@@ -141,7 +141,7 @@ const verifyOTP = async (req, res, next) => {
 const saveAvatar = async (req, res) => {
 	try {
 		// Extract user ID from JWT authentication
-		const userId = req.user.id; // ✅ Ensure this matches your auth middleware
+		const userId = req.user.userId; // ✅ Ensure this matches your auth middleware
 
 		// Check if user exists in the database
 		const user = await User.findById(userId);
