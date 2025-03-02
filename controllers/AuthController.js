@@ -140,20 +140,25 @@ const verifyOTP = async (req, res, next) => {
 
 const saveAvatar = async (req, res) => {
 	try {
-		const userId = req.user.userId;
+		// Extract user ID from JWT authentication
+		const userId = req.user.id; // ✅ Ensure this matches your auth middleware
 
-		if (!userId) {
+		// Check if user exists in the database
+		const user = await User.findById(userId);
+		if (!user) {
 			return res.status(404).json({ message: "User not found" });
 		}
 
-		userId.avatarUrl = req.body.avatarUrl;
-		await userId.save();
+		// Update the avatar URL and save
+		user.avatarUrl = req.body.avatarUrl;
+		await user.save(); // ✅ Save to database
 
-		res.json({ success: true, avatarUrl: userId.avatarUrl });
+		res.json({ success: true, avatarUrl: user.avatarUrl });
 	} catch (error) {
 		res.status(500).json({ message: error.message });
 	}
 };
+
 const getProfile = async (req, res) => {
 	try {
 		const user = await User.findById(req.user.id).select("-password"); // Exclude password
@@ -168,12 +173,11 @@ const getProfile = async (req, res) => {
 	}
 };
 
-
 module.exports = {
 	userSignUp,
 	userLogIn,
 	emailVerificationCode,
 	verifyOTP,
 	saveAvatar,
-	getProfile
+	getProfile,
 };
