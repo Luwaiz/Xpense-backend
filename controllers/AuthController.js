@@ -27,7 +27,6 @@ const userSignUp = async (req, res, next) => {
 			updatedAt: newUser.updatedAt,
 		};
 
-
 		res.status(201).json({
 			message: "User registered successfully",
 			token,
@@ -48,12 +47,11 @@ const userLogIn = async (req, res) => {
 			_id: user._id,
 			name: user.name,
 			email: user.email,
-			createdAt: user.createdAt, 
+			createdAt: user.createdAt,
 			updatedAt: user.updatedAt,
 		};
 
-		
-		console.log(userWithoutPassword)
+		console.log(userWithoutPassword);
 
 		res.status(200).json({
 			message: "User logged in successfully",
@@ -75,7 +73,7 @@ const sendOTP = (email, otp) => {
 		from: "Xpense",
 		to: email,
 		subject: "OTP Verification Code",
-		text: `Your OTP is: ${otp}`, 
+		text: `Your OTP is: ${otp}`,
 	};
 
 	let Transporter = nodemailer.createTransport({
@@ -140,4 +138,42 @@ const verifyOTP = async (req, res, next) => {
 	}
 };
 
-module.exports = { userSignUp, userLogIn, emailVerificationCode, verifyOTP };
+const saveAvatar = async (req, res) => {
+	try {
+		const userId = req.user.userId;
+
+		if (!userId) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
+		userId.avatarUrl = req.body.avatarUrl;
+		await userId.save();
+
+		res.json({ success: true, avatarUrl: userId.avatarUrl });
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+};
+const getProfile = async (req, res) => {
+	try {
+		const user = await User.findById(req.user.id).select("-password"); // Exclude password
+
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
+		res.json({ success: true, user });
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+};
+
+
+module.exports = {
+	userSignUp,
+	userLogIn,
+	emailVerificationCode,
+	verifyOTP,
+	saveAvatar,
+	getProfile
+};
