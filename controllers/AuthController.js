@@ -173,6 +173,30 @@ const getProfile = async (req, res) => {
 	}
 };
 
+const updateUser = async (req, res) => {
+	try {
+		const id = req.params.id;
+		const updates = req.body;
+
+		// Find the user and update only the provided fields
+		const updatedUser = await User.findByIdAndUpdate(id, updates, {
+			new: true, // Return the updated document
+			runValidators: true,
+		});
+		if (!updatedUser) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
+		res
+			.status(200)
+			.json({ message: "Profile updated successfully", user: updatedUser });
+	} catch (error) {
+		res
+			.status(500)
+			.json({ message: "Error updating profile", error: error.message });
+	}
+};
+
 module.exports = {
 	userSignUp,
 	userLogIn,
@@ -180,4 +204,5 @@ module.exports = {
 	verifyOTP,
 	saveAvatar,
 	getProfile,
+	updateUser,
 };
