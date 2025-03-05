@@ -17,5 +17,5 @@ router.post("/reqOTP", emailVerificationCode);
 router.post("/verifyOTP", verifyOTP);
 router.post("/saveAvatar", authMiddleware, saveAvatar);
 router.get("/getProfile", authMiddleware, getProfile);
-router.patch("/updateProfile/:id", authMiddleware, updateUser);
+router.patch("/updateProfile", authMiddleware, updateUser);
 module.exports = router;

@@ -175,12 +175,11 @@ const getProfile = async (req, res) => {
 
 const updateUser = async (req, res) => {
 	try {
-		const id = req.params.id;
-		const updates = req.body;
+		const id = req.user.userId; // Extract userId from token
+		const updates = req.body; // Fields to update
 
-		// Find the user and update only the provided fields
-		const updatedUser = await User.findByIdAndUpdate(id, updates, {
-			new: true, // Return the updated document
+		const updatedUser = await User.findOneAndUpdate({ _id: id }, updates, {
+			new: true,
 			runValidators: true,
 		});
 		if (!updatedUser) {
