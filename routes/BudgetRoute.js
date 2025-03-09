@@ -16,6 +16,6 @@ router.get(
 	authMiddleware,
 	getExpensesByCategory
 );
-router.put("/:budgetId", authMiddleware, updateBudget);
-router.delete("/:budgetId", authMiddleware, deleteBudget); // Delete route
+router.put("/updateBudget/:budgetId", authMiddleware, updateBudget);
+router.delete("/deleteBudget/:budgetId", authMiddleware, deleteBudget); // Delete route
 module.exports = router;
