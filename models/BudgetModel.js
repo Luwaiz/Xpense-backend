@@ -18,14 +18,6 @@ const BudgetSchema = mongoose.Schema({
         type: "number",
         default: 0
     },
-    startDate: {
-        type: "date",
-        required: true
-    },
-    endDate: {
-        type: "date",
-        required: true
-    }
 });
 
 const BudgetModel = mongoose.model("Budget", BudgetSchema);

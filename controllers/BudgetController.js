@@ -6,7 +6,7 @@ const createBudget = async (req, res) => {
         const { name, limit, startDate, endDate } = req.body;
         const userId = req.user.userId;
 
-        if (!name || !limit || !startDate || !endDate) {
+        if (!name || !limit) {
             return res.status(400).json({ message: "All fields are required." });
         }
 
@@ -15,8 +15,6 @@ const createBudget = async (req, res) => {
             name,
             limit,
             spent: 0,
-            startDate,
-            endDate
         });
 
         await newBudget.save();
@@ -43,16 +41,80 @@ const getBudgets = async (req, res) => {
 };
 
 const getExpensesByCategory = async (req, res) => {
-	try {
+    try {
         const { budgetId } = req.params;
         const userId = req.user.userId;
 
+        // Find budget details
+        const budget = await BudgetModel.findOne({ _id: budgetId, userId });
+
+        if (!budget) {
+            return res.status(404).json({ message: "Budget not found." });
+        }
+
+        // Find all expenses under the budget
         const expenses = await ExpenseModel.find({ userId, budgetId }).sort({ date: -1 });
 
-        res.status(200).json(expenses);
+        res.status(200).json({
+            budget, // Budget information
+            expenses, // List of expenses under this budget
+        });
     } catch (error) {
-        next(error);
+        res.status(500).json({ message: "Error fetching expenses", error });
     }
 };
 
-module.exports = { getBudgets, getExpensesByCategory, createBudget };
+
+const updateBudget = async (req, res) => {
+    try {
+        const { budgetId } = req.params;
+        const { name, limit } = req.body;
+        const userId = req.user.userId;
+
+        // Check if at least one field is provided
+        if (name === undefined && limit === undefined) {
+            return res.status(400).json({ message: "Provide at least one field to update." });
+        }
+
+        // Build update object dynamically
+        const updateFields = {};
+        if (name !== undefined) updateFields.name = name;
+        if (limit !== undefined) updateFields.limit = limit;
+
+        // Find and update the budget
+        const updatedBudget = await BudgetModel.findOneAndUpdate(
+            { _id: budgetId, userId },
+            { $set: updateFields },
+            { new: true } // Return the updated budget
+        );
+
+        if (!updatedBudget) {
+            return res.status(404).json({ message: "Budget not found." });
+        }
+
+        res.status(200).json({ message: "Budget updated successfully.", budget: updatedBudget });
+    } catch (error) {
+        res.status(500).json({ message: "Error updating budget", error });
+    }
+};
+
+const deleteBudget = async (req, res) => {
+    try {
+        const { budgetId } = req.params;
+        const userId = req.user.userId;
+
+        // Find and delete the budget
+        const deletedBudget = await BudgetModel.findOneAndDelete({ _id: budgetId, userId });
+
+        if (!deletedBudget) {
+            return res.status(404).json({ message: "Budget not found." });
+        }
+
+        res.status(200).json({ message: "Budget deleted successfully.", budget: deletedBudget });
+    } catch (error) {
+        res.status(500).json({ message: "Error deleting budget", error });
+    }
+};
+
+
+module.exports = { getBudgets, getExpensesByCategory, createBudget , updateBudget, deleteBudget};
