@@ -3,7 +3,7 @@ const ExpenseModel = require("../models/ExpenseModel");
 
 const createBudget = async (req, res) => {
 	try {
-        const { name, limit, startDate, endDate } = req.body;
+        const { name, limit } = req.body;
         const userId = req.user.userId;
 
         if (!name || !limit) {
@@ -28,7 +28,7 @@ const createBudget = async (req, res) => {
 const getBudgets = async (req, res) => {
 	try {
 		const userId = req.user.userId;
-		const budgets = await BudgetModel.find({ userId });
+		const budgets = await BudgetModel.find({ userId }).select("name limit spent createdAt"); // Ensure createdAt is included
 
 		if (!budgets.length) {
 			return res.status(404).json({ message: "No budgets found." });
@@ -39,6 +39,7 @@ const getBudgets = async (req, res) => {
 		res.status(500).json({ message: "Error fetching budgets", error });
 	}
 };
+
 
 const getExpensesByCategory = async (req, res) => {
     try {
@@ -110,11 +111,13 @@ const deleteBudget = async (req, res) => {
             return res.status(404).json({ message: "Budget not found." });
         }
 
-        res.status(200).json({ message: "Budget deleted successfully.", budget: deletedBudget });
+        // Delete all expenses associated with this budget
+        await ExpenseModel.deleteMany({ budgetId });
+
+        res.status(200).json({ message: "Budget and associated expenses deleted successfully.", budget: deletedBudget });
     } catch (error) {
         res.status(500).json({ message: "Error deleting budget", error });
     }
 };
-
 
 module.exports = { getBudgets, getExpensesByCategory, createBudget , updateBudget, deleteBudget};
