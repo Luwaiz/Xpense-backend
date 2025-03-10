@@ -121,51 +121,54 @@ const getMonthlyExpenses = async (req, res) => {
 		const userId = req.user.userId;
 
 		// Get the first day of the current year
-		const startOfYear = new Date(new Date().getFullYear(), 0, 1); // Jan 1st
+		const startOfYear = new Date(new Date().getFullYear(), 0, 1);
 		startOfYear.setHours(0, 0, 0, 0);
 
 		// Fetch all expenses for the current year
 		const expenses = await ExpenseModel.find({
 			userId,
-			date: { $gte: startOfYear }, // Get only this year's expenses
-		});
+			date: { $gte: startOfYear },
+		}).sort({ date: 1 });
 
-		// Object to store total expenses per month
+		// Initialize object to store expenses grouped by month
 		const monthlyData = {
-			January: 0,
-			February: 0,
-			March: 0,
-			April: 0,
-			May: 0,
-			June: 0,
-			July: 0,
-			August: 0,
-			September: 0,
-			October: 0,
-			November: 0,
-			December: 0,
+			January: { totalAmount: 0, expenses: [] },
+			February: { totalAmount: 0, expenses: [] },
+			March: { totalAmount: 0, expenses: [] },
+			April: { totalAmount: 0, expenses: [] },
+			May: { totalAmount: 0, expenses: [] },
+			June: { totalAmount: 0, expenses: [] },
+			July: { totalAmount: 0, expenses: [] },
+			August: { totalAmount: 0, expenses: [] },
+			September: { totalAmount: 0, expenses: [] },
+			October: { totalAmount: 0, expenses: [] },
+			November: { totalAmount: 0, expenses: [] },
+			December: { totalAmount: 0, expenses: [] },
 		};
 
-		// Loop through expenses and sum up amounts for each month
+		// Group expenses by month
 		expenses.forEach((expense) => {
 			const month = new Date(expense.date).toLocaleString("en-US", {
 				month: "long",
 			});
-			monthlyData[month] += expense.amount;
+			monthlyData[month].totalAmount += expense.amount;
+			monthlyData[month].expenses.push(expense);
 		});
 
-		// Convert object to an array of { month, amount }
+		// Convert object into an array
 		const formattedData = Object.keys(monthlyData).map((month) => ({
 			month,
-			amount: monthlyData[month],
+			totalAmount: monthlyData[month].totalAmount,
+			expenses: monthlyData[month].expenses,
 		}));
 
-		res.status(200).json({ yearlyData: formattedData });
+		res.status(200).json({ monthlyData: formattedData });
 	} catch (err) {
-		res.status(500).json({ message: "Error fetching yearly expenses", err });
+		res.status(500).json({ message: "Error fetching monthly expenses", err });
 		console.log(err);
 	}
 };
+
 const getExpenseById = async (req, res, next) => {
 	try {
 		const { expenseId } = req.params;
@@ -183,6 +186,75 @@ const getExpenseById = async (req, res, next) => {
 	}
 };
 
+const updateExpense = async (req, res) => {
+	try {
+		const { expenseId } = req.params;
+		const { name, amount, category, description } = req.body;
+		const userId = req.user.userId;
+
+		// Ensure at least one field is provided for update
+		if (!name && !amount && !category && !description) {
+			return res
+				.status(400)
+				.json({ message: "Provide at least one field to update." });
+		}
+
+		// Build update object dynamically
+		const updateFields = {};
+		if (name !== undefined) updateFields.name = name;
+		if (amount !== undefined) updateFields.amount = amount;
+		if (category !== undefined) updateFields.category = category;
+		if (description !== undefined) updateFields.description = description;
+
+		// Find and update the expense
+		const updatedExpense = await ExpenseModel.findOneAndUpdate(
+			{ _id: expenseId, userId },
+			{ $set: updateFields },
+			{ new: true }
+		);
+
+		if (!updatedExpense) {
+			return res.status(404).json({ message: "Expense not found." });
+		}
+
+		res
+			.status(200)
+			.json({
+				message: "Expense updated successfully.",
+				expense: updatedExpense,
+			});
+	} catch (error) {
+		res.status(500).json({ message: "Error updating expense", error });
+	}
+};
+
+
+const deleteExpense = async (req, res) => {
+	try {
+		const { expenseId } = req.params;
+		const userId = req.user.userId;
+
+		// Find and delete the expense
+		const deletedExpense = await ExpenseModel.findOneAndDelete({
+			_id: expenseId,
+			userId,
+		});
+
+		if (!deletedExpense) {
+			return res.status(404).json({ message: "Expense not found." });
+		}
+
+		res
+			.status(200)
+			.json({
+				message: "Expense deleted successfully.",
+				expense: deletedExpense,
+			});
+	} catch (error) {
+		res.status(500).json({ message: "Error deleting expense", error });
+	}
+};
+
 module.exports = {
 	createExpense,
 	getExpenses,
@@ -190,4 +262,6 @@ module.exports = {
 	getWeeklyExpenses,
 	getMonthlyExpenses,
 	getExpenseById,
+	updateExpense,
+	deleteExpense,
 };
