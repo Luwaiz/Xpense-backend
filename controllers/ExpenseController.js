@@ -1,5 +1,9 @@
 const BudgetModel = require("../models/BudgetModel");
 const ExpenseModel = require("../models/ExpenseModel");
+const ExcelJS = require("exceljs");
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
 
 const createExpense = async (req, res, next) => {
 	try {
@@ -217,17 +221,14 @@ const updateExpense = async (req, res) => {
 			return res.status(404).json({ message: "Expense not found." });
 		}
 
-		res
-			.status(200)
-			.json({
-				message: "Expense updated successfully.",
-				expense: updatedExpense,
-			});
+		res.status(200).json({
+			message: "Expense updated successfully.",
+			expense: updatedExpense,
+		});
 	} catch (error) {
 		res.status(500).json({ message: "Error updating expense", error });
 	}
 };
-
 
 const deleteExpense = async (req, res) => {
 	try {
@@ -244,14 +245,108 @@ const deleteExpense = async (req, res) => {
 			return res.status(404).json({ message: "Expense not found." });
 		}
 
-		res
-			.status(200)
-			.json({
-				message: "Expense deleted successfully.",
-				expense: deletedExpense,
-			});
+		res.status(200).json({
+			message: "Expense deleted successfully.",
+			expense: deletedExpense,
+		});
 	} catch (error) {
 		res.status(500).json({ message: "Error deleting expense", error });
+	}
+};
+
+const downloadExcel = async (req, res) => {
+	try {
+		const userId = req.user.userId;
+		const expenses = await ExpenseModel.find({ userId });
+
+		// Create a new Excel workbook & worksheet
+		const workbook = new ExcelJS.Workbook();
+		const worksheet = workbook.addWorksheet("Expenses");
+
+		// Add column headers
+		worksheet.columns = [
+			{ header: "Name", key: "name", width: 25 },
+			{ header: "Amount", key: "amount", width: 15 },
+			{ header: "Category", key: "category", width: 20 },
+			{ header: "Description", key: "description", width: 30 },
+			{ header: "Date", key: "date", width: 20 },
+		];
+
+		// Add data to the worksheet
+		expenses.forEach((expense) => {
+			worksheet.addRow({
+				name: expense.name,
+				amount: expense.amount,
+				category: expense.category,
+				description: expense.description,
+				date: expense.date.toISOString().split("T")[0],
+			});
+		});
+
+		// Generate a unique filename
+		const filePath = path.join(
+			__dirname,
+			`../../exports/expenses_${userId}.xlsx`
+		);
+		await workbook.xlsx.writeFile(filePath);
+
+		// Send the file as a response
+		res.download(filePath, "expenses.xlsx", (err) => {
+			if (err) console.error("File Download Error:", err);
+			fs.unlinkSync(filePath); // Delete file after sending
+		});
+	} catch (error) {
+		res.status(500).json({ message: "Error generating Excel file", error });
+	}
+};
+
+// 📌 Generate & Download PDF File
+const downloadPDF = async (req, res) => {
+	try {
+		const userId = req.user.userId;
+		const expenses = await ExpenseModel.find({ userId });
+
+		const doc = new PDFDocument();
+		const filePath = path.join(
+			__dirname,
+			`../../exports/expenses_${userId}.pdf`
+		);
+		const writeStream = fs.createWriteStream(filePath);
+		doc.pipe(writeStream);
+
+		// PDF Header
+		doc.fontSize(20).text("Expense Report", { align: "center" });
+		doc.moveDown(1);
+
+		// Add expenses in table format
+		expenses.forEach((expense, index) => {
+			doc
+				.fontSize(14)
+				.text(`${index + 1}. ${expense.name} - ₦${expense.amount}`, {
+					align: "left",
+				});
+			doc
+				.fontSize(12)
+				.text(
+					`Category: ${expense.category} | Date: ${
+						expense.date.toISOString().split("T")[0]
+					}`,
+					{ align: "left" }
+				);
+			doc.moveDown(1);
+		});
+
+		doc.end();
+
+		// Send file after writing
+		writeStream.on("finish", () => {
+			res.download(filePath, "expenses.pdf", (err) => {
+				if (err) console.error("File Download Error:", err);
+				fs.unlinkSync(filePath); // Delete file after sending
+			});
+		});
+	} catch (error) {
+		res.status(500).json({ message: "Error generating PDF file", error });
 	}
 };
 
@@ -264,4 +359,6 @@ module.exports = {
 	getExpenseById,
 	updateExpense,
 	deleteExpense,
+	downloadExcel,
+	downloadPDF,
 };
