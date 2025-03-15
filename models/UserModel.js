@@ -21,10 +21,12 @@ const UserSchema = mongoose.Schema(
 			required: true,
 			minlength: [8, "Password must be at least 8 characters long"],
 		},
-		avatarUrl:{
+		avatarUrl: {
 			type: "string",
-            default: "",
-		}
+			default: "",
+		},
+		resetCode: { type: "string" }, // OTP
+		resetCodeExpires: { type: "date" }, // Expiry time
 	},
 	{ timestamps: true }
 );
