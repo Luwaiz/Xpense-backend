@@ -8,6 +8,8 @@ const {
 	getExpenseById,
 	updateExpense,
 	deleteExpense,
+	downloadExcel,
+	downloadPDF,
 } = require("../controllers/ExpenseController");
 const authMiddleware = require("../middlewares/authMiddlewares");
 const router = express.Router();
@@ -20,5 +22,7 @@ router.get("/weeklyExpenses", authMiddleware, getWeeklyExpenses);
 router.get("/monthlyExpenses", authMiddleware, getMonthlyExpenses);
 router.put("/updateExpenses/:expenseId", authMiddleware, updateExpense);
 router.delete("/deleteExpenses/:expenseId", authMiddleware, deleteExpense);
+router.get("/export/excel", authMiddleware, downloadExcel);
+router.get("/export/pdf", authMiddleware, downloadPDF);
 
 module.exports = router;
