@@ -72,21 +72,14 @@ const updateBudget = async (req, res) => {
         const { name, limit } = req.body;
         const userId = req.user.userId;
 
-        // Check if at least one field is provided
-        if (name === undefined && limit === undefined) {
-            return res.status(400).json({ message: "Provide at least one field to update." });
+        if (!mongoose.Types.ObjectId.isValid(budgetId)) {
+            return res.status(404).json({ message: "Invalid budget ID." });
         }
 
-        // Build update object dynamically
-        const updateFields = {};
-        if (name !== undefined) updateFields.name = name;
-        if (limit !== undefined) updateFields.limit = limit;
-
-        // Find and update the budget
         const updatedBudget = await BudgetModel.findOneAndUpdate(
             { _id: budgetId, userId },
-            { $set: updateFields },
-            { new: true } // Return the updated budget
+            { $set: { name, limit } },
+            { new: true }
         );
 
         if (!updatedBudget) {
@@ -95,9 +88,11 @@ const updateBudget = async (req, res) => {
 
         res.status(200).json({ message: "Budget updated successfully.", budget: updatedBudget });
     } catch (error) {
+        console.error("Error updating budget:", error);
         res.status(500).json({ message: "Error updating budget", error });
     }
 };
+
 
 const deleteBudget = async (req, res) => {
     try {

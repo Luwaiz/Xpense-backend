@@ -4,6 +4,10 @@ const generateToken = require("../Utils/jwtGenerate");
 const randomString = require("randomstring");
 const nodemailer = require("nodemailer");
 const OTPModel = require("../models/OTPModel");
+
+const generateResetCode = () => {
+	return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
+};
 dotenv.config();
 
 const userSignUp = async (req, res, next) => {
@@ -138,6 +142,106 @@ const verifyOTP = async (req, res, next) => {
 	}
 };
 
+const forgotPassword = async (req, res) => {
+	try {
+		const { email } = req.body;
+
+		// Check if user exists
+		const user = await User.findOne({ email });
+		if (!user) return res.status(404).json({ message: "User not found" });
+
+		// Generate and save reset code
+		const resetCode = generateResetCode();
+		user.resetCode = resetCode;
+		user.resetCodeExpires = Date.now() + 10 * 60 * 1000; // Code valid for 10 minutes
+		await user.save();
+
+		// Send OTP via email
+		await sendResetCodeEmail(user.email, resetCode);
+
+		res.status(200).json({ message: "Reset code sent successfully" });
+	} catch (error) {
+		res.status(500).json({ message: "Error processing request", error });
+	}
+};
+
+// 🔹 2️⃣ Send OTP via Email
+const sendResetCodeEmail = async (email, code) => {
+	let transporter = nodemailer.createTransport({
+		service: "Gmail",
+		auth: {
+			user: process.env.EMAIL_USER, // Use env variables
+			pass: process.env.EMAIL_PASS,
+		},
+		tls: { rejectUnauthorized: false },
+	});
+
+	await transporter.sendMail({
+		from: "Xpense Support <no-reply@xpense.com>",
+		to: email,
+		subject: "Password Reset Code",
+		text: `Your password reset code is:
+			   ${code}
+			   This code expires in 10 minutes.`,
+	});
+};
+
+// 🔹 3️⃣ Verify Reset Code
+const verifyResetCode = async (req, res) => {
+	try {
+		const { email, code } = req.body;
+
+		// Find user
+		const user = await User.findOne({ email, resetCode: code });
+
+		if (!user)
+			return res.status(400).json({ message: "Invalid or expired reset code" });
+
+		// Check if the code is expired
+		if (Date.now() > user.resetCodeExpires) {
+			return res.status(400).json({ message: "Reset code expired" });
+		}
+
+		res.status(200).json({ message: "Code verified successfully" });
+	} catch (error) {
+		res.status(500).json({ message: "Error verifying reset code", error });
+	}
+};
+
+// 🔹 4️⃣ Reset Password
+const resetPassword = async (req, res) => {
+	try {
+		const { email, code, newPassword } = req.body;
+
+		// Find user with matching email and reset code
+		const user = await User.findOne({ email, resetCode: code });
+
+		if (!user)
+			return res.status(400).json({ message: "Invalid reset request" });
+
+		// Check if code is expired
+		if (Date.now() > user.resetCodeExpires) {
+			return res.status(400).json({ message: "Reset code expired" });
+		}
+
+		// Hash new password
+		const salt = await bcrypt.genSalt(10);
+		user.password = await bcrypt.hash(newPassword, salt);
+
+		// Clear reset fields
+		user.resetCode = undefined;
+		user.resetCodeExpires = undefined;
+
+		await user.save();
+
+		res
+			.status(200)
+			.json({ message: "Password reset successful. You can now log in." });
+	} catch (error) {
+		res.status(500).json({ message: "Error resetting password", error });
+	}
+};
+
 const saveAvatar = async (req, res) => {
 	try {
 		// Extract user ID from JWT authentication
@@ -204,4 +308,7 @@ module.exports = {
 	saveAvatar,
 	getProfile,
 	updateUser,
+	forgotPassword,
+    verifyResetCode,
+    resetPassword,
 };
