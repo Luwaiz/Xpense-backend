@@ -254,10 +254,17 @@ const deleteExpense = async (req, res) => {
 	}
 };
 
+const exportsDir = path.join(__dirname, "../../exports");
+if (!fs.existsSync(exportsDir)) {
+	fs.mkdirSync(exportsDir, { recursive: true });
+}
+
+// 📌 Generate & Download Excel File
 const downloadExcel = async (req, res) => {
 	try {
 		const userId = req.user.userId;
 		const expenses = await ExpenseModel.find({ userId });
+		console.log(expenses)
 
 		// Create a new Excel workbook & worksheet
 		const workbook = new ExcelJS.Workbook();
@@ -283,19 +290,22 @@ const downloadExcel = async (req, res) => {
 			});
 		});
 
-		// Generate a unique filename
-		const filePath = path.join(
-			__dirname,
-			`../../exports/expenses_${userId}.xlsx`
-		);
+		// Generate file path
+		const filePath = path.join(exportsDir, `expenses_${userId}.xlsx`);
+
+		// Write file
 		await workbook.xlsx.writeFile(filePath);
 
-		// Send the file as a response
+		// Send file
 		res.download(filePath, "expenses.xlsx", (err) => {
-			if (err) console.error("File Download Error:", err);
+			if (err) {
+				console.error("File Download Error:", err);
+				return res.status(500).json({ message: "Error sending file", err });
+			}
 			fs.unlinkSync(filePath); // Delete file after sending
 		});
 	} catch (error) {
+		console.error("Error generating Excel file:", error);
 		res.status(500).json({ message: "Error generating Excel file", error });
 	}
 };
@@ -305,12 +315,11 @@ const downloadPDF = async (req, res) => {
 	try {
 		const userId = req.user.userId;
 		const expenses = await ExpenseModel.find({ userId });
+		console.log(expenses)
 
+		// Generate file path
+		const filePath = path.join(exportsDir, `expenses_${userId}.pdf`);
 		const doc = new PDFDocument();
-		const filePath = path.join(
-			__dirname,
-			`../../exports/expenses_${userId}.pdf`
-		);
 		const writeStream = fs.createWriteStream(filePath);
 		doc.pipe(writeStream);
 
@@ -341,15 +350,18 @@ const downloadPDF = async (req, res) => {
 		// Send file after writing
 		writeStream.on("finish", () => {
 			res.download(filePath, "expenses.pdf", (err) => {
-				if (err) console.error("File Download Error:", err);
+				if (err) {
+					console.error("File Download Error:", err);
+					return res.status(500).json({ message: "Error sending file", err });
+				}
 				fs.unlinkSync(filePath); // Delete file after sending
 			});
 		});
 	} catch (error) {
+		console.error("Error generating PDF file:", error);
 		res.status(500).json({ message: "Error generating PDF file", error });
 	}
 };
-
 module.exports = {
 	createExpense,
 	getExpenses,
