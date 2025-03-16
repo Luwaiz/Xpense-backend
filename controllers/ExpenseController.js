@@ -261,107 +261,118 @@ if (!fs.existsSync(exportsDir)) {
 
 // 📌 Generate & Download Excel File
 const downloadExcel = async (req, res) => {
-	try {
-		const userId = req.user.userId;
-		const expenses = await ExpenseModel.find({ userId });
-		console.log(expenses)
+    try {
+        const { startDate, endDate, category } = req.query;
+        const userId = req.user.userId;
 
-		// Create a new Excel workbook & worksheet
-		const workbook = new ExcelJS.Workbook();
-		const worksheet = workbook.addWorksheet("Expenses");
+        let filter = { userId };
+        if (startDate && endDate) {
+            filter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+        }
+        if (category) {
+            filter.category = category;
+        }
 
-		// Add column headers
-		worksheet.columns = [
-			{ header: "Name", key: "name", width: 25 },
-			{ header: "Amount", key: "amount", width: 15 },
-			{ header: "Category", key: "category", width: 20 },
-			{ header: "Description", key: "description", width: 30 },
-			{ header: "Date", key: "date", width: 20 },
-		];
+        const expenses = await ExpenseModel.find(filter);
 
-		// Add data to the worksheet
-		expenses.forEach((expense) => {
-			worksheet.addRow({
-				name: expense.name,
-				amount: expense.amount,
-				category: expense.category,
-				description: expense.description,
-				date: expense.date.toISOString().split("T")[0],
-			});
-		});
+        if (!expenses.length) {
+            return res.status(404).json({ message: "No expenses found for the selected filters." });
+        }
 
-		// Generate file path
-		const filePath = path.join(exportsDir, `expenses_${userId}.xlsx`);
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Expenses");
 
-		// Write file
-		await workbook.xlsx.writeFile(filePath);
+        worksheet.columns = [
+            { header: "Name", key: "name", width: 25 },
+            { header: "Amount", key: "amount", width: 15 },
+            { header: "Category", key: "category", width: 20 },
+            { header: "Description", key: "description", width: 30 },
+            { header: "Date", key: "date", width: 20 },
+        ];
 
-		// Send file
-		res.download(filePath, "expenses.xlsx", (err) => {
-			if (err) {
-				console.error("File Download Error:", err);
-				return res.status(500).json({ message: "Error sending file", err });
-			}
-			fs.unlinkSync(filePath); // Delete file after sending
-		});
-	} catch (error) {
-		console.error("Error generating Excel file:", error);
-		res.status(500).json({ message: "Error generating Excel file", error });
-	}
+        expenses.forEach(expense => {
+            worksheet.addRow({
+                name: expense.name,
+                amount: expense.amount,
+                category: expense.category,
+                description: expense.description,
+                date: expense.date.toISOString().split("T")[0],
+            });
+        });
+
+        const filePath = path.join(__dirname, `../../exports/expenses_${userId}.xlsx`);
+        await workbook.xlsx.writeFile(filePath);
+
+        res.download(filePath, "expenses.xlsx", err => {
+            if (err) {
+                console.error("File Download Error:", err);
+                return res.status(500).json({ message: "Error downloading file" });
+            }
+            fs.unlinkSync(filePath); // Delete file after sending
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error generating Excel file", error });
+    }
 };
+
 
 // 📌 Generate & Download PDF File
 const downloadPDF = async (req, res) => {
-	try {
-		const userId = req.user.userId;
-		const expenses = await ExpenseModel.find({ userId });
-		console.log(expenses)
+    try {
+        const { startDate, endDate, category } = req.query;
+        const userId = req.user.userId;
 
-		// Generate file path
-		const filePath = path.join(exportsDir, `expenses_${userId}.pdf`);
-		const doc = new PDFDocument();
-		const writeStream = fs.createWriteStream(filePath);
-		doc.pipe(writeStream);
+        let filter = { userId };
+        if (startDate && endDate) {
+            filter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+        }
+        if (category) {
+            filter.category = category;
+        }
 
-		// PDF Header
-		doc.fontSize(20).text("Expense Report", { align: "center" });
-		doc.moveDown(1);
+        const expenses = await ExpenseModel.find(filter);
 
-		// Add expenses in table format
-		expenses.forEach((expense, index) => {
-			doc
-				.fontSize(14)
-				.text(`${index + 1}. ${expense.name} - ₦${expense.amount}`, {
-					align: "left",
-				});
-			doc
-				.fontSize(12)
-				.text(
-					`Category: ${expense.category} | Date: ${
-						expense.date.toISOString().split("T")[0]
-					}`,
-					{ align: "left" }
-				);
-			doc.moveDown(1);
-		});
+        if (!expenses.length) {
+            return res.status(404).json({ message: "No expenses found for the selected filters." });
+        }
 
-		doc.end();
+        const doc = new PDFDocument();
+        const filePath = path.join(__dirname, `../../exports/expenses_${userId}.pdf`);
+        const writeStream = fs.createWriteStream(filePath);
+        doc.pipe(writeStream);
 
-		// Send file after writing
-		writeStream.on("finish", () => {
-			res.download(filePath, "expenses.pdf", (err) => {
-				if (err) {
-					console.error("File Download Error:", err);
-					return res.status(500).json({ message: "Error sending file", err });
-				}
-				fs.unlinkSync(filePath); // Delete file after sending
-			});
-		});
-	} catch (error) {
-		console.error("Error generating PDF file:", error);
-		res.status(500).json({ message: "Error generating PDF file", error });
-	}
+        // PDF Header
+        doc.fontSize(20).text("Expense Report", { align: "center" });
+        doc.moveDown(1);
+
+        // Add expenses in table format
+        expenses.forEach((expense, index) => {
+            doc
+                .fontSize(14)
+                .text(`${index + 1}. ${expense.name} - ₦${expense.amount}`, { align: "left" });
+            doc
+                .fontSize(12)
+                .text(`Category: ${expense.category} | Date: ${expense.date.toISOString().split("T")[0]}`, { align: "left" });
+            doc.moveDown(1);
+        });
+
+        doc.end();
+
+        writeStream.on("finish", () => {
+            res.download(filePath, "expenses.pdf", err => {
+                if (err) {
+                    console.error("File Download Error:", err);
+                    return res.status(500).json({ message: "Error downloading file" });
+                }
+                fs.unlinkSync(filePath); // Delete file after sending
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error generating PDF file", error });
+    }
 };
+
+
 module.exports = {
 	createExpense,
 	getExpenses,
