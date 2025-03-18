@@ -281,18 +281,59 @@ const downloadExcel = async (req, res) => {
 
 		console.log("📌 Applied Filter:", JSON.stringify(filter, null, 2));
 
+		// 🔍 Check if the database query runs correctly
 		const expenses = await ExpenseModel.find(filter);
-
 		console.log("📄 Expenses Found:", expenses.length, "records");
 
 		if (!expenses.length) {
+			console.log("❌ No expenses found.");
 			return res
 				.status(404)
 				.json({ message: "No expenses found for the selected filters." });
 		}
 
-		// ✅ Generate Excel (rest of your code...)
+		console.log("✅ Proceeding to generate Excel file...");
+
+		// ✅ Generate Excel File (Continue with your Excel generation logic)
+		const workbook = new ExcelJS.Workbook();
+		const worksheet = workbook.addWorksheet("Expenses");
+
+		worksheet.columns = [
+			{ header: "Name", key: "name", width: 25 },
+			{ header: "Amount", key: "amount", width: 15 },
+			{ header: "Category", key: "category", width: 20 },
+			{ header: "Description", key: "description", width: 30 },
+			{ header: "Date", key: "date", width: 20 },
+		];
+
+		expenses.forEach((expense) => {
+			worksheet.addRow({
+				name: expense.name,
+				amount: expense.amount,
+				category: expense.category,
+				description: expense.description,
+				date: expense.date.toISOString().split("T")[0],
+			});
+		});
+
+		const filePath = path.join(
+			__dirname,
+			`../../exports/expenses_${userId}.xlsx`
+		);
+		await workbook.xlsx.writeFile(filePath);
+
+		console.log("✅ Excel file generated:", filePath);
+
+		res.download(filePath, "expenses.xlsx", (err) => {
+			if (err) {
+				console.error("❌ File Download Error:", err);
+				return res.status(500).json({ message: "Error downloading file" });
+			}
+			fs.unlinkSync(filePath);
+			console.log("🗑️ File deleted after sending.");
+		});
 	} catch (error) {
+		console.error("🚨 Error:", error);
 		res.status(500).json({ message: "Error generating Excel file", error });
 	}
 };
