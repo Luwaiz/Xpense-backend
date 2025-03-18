@@ -345,34 +345,46 @@ const downloadPDF = async (req, res) => {
 		const userId = req.user.userId;
 
 		let filter = { userId };
+
+		// ✅ Fix Date Filtering (Ensure correct time range)
 		if (startDate && endDate) {
-			filter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
-		}
-		if (category) {
-			filter.category = category;
+			filter.date = {
+				$gte: new Date(startDate + "T00:00:00.000Z"),
+				$lte: new Date(endDate + "T23:59:59.999Z"),
+			};
 		}
 
+		// ✅ Fix Category Filtering (Case-insensitive & prevent "All Categories")
+		if (category && category !== "All Categories") {
+			filter.category = { $regex: new RegExp(`^${category}$`, "i") };
+		}
+
+		console.log("📌 Applied Filter:", JSON.stringify(filter, null, 2));
+
+		// 🔍 Check if the database query runs correctly
 		const expenses = await ExpenseModel.find(filter);
+		console.log("📄 Expenses Found:", expenses.length, "records");
 
 		if (!expenses.length) {
+			console.log("❌ No expenses found.");
 			return res
 				.status(404)
 				.json({ message: "No expenses found for the selected filters." });
 		}
 
+		console.log("✅ Proceeding to generate PDF file...");
+
+		// ✅ Create PDF Document
 		const doc = new PDFDocument();
-		const filePath = path.join(
-			__dirname,
-			`../../exports/expenses_${userId}.pdf`
-		);
+		const filePath = path.join(__dirname, `../../exports/expenses_${userId}.pdf`);
 		const writeStream = fs.createWriteStream(filePath);
 		doc.pipe(writeStream);
 
-		// PDF Header
+		// ✅ PDF Header
 		doc.fontSize(20).text("Expense Report", { align: "center" });
 		doc.moveDown(1);
 
-		// Add expenses in table format
+		// ✅ Add expenses in table format
 		expenses.forEach((expense, index) => {
 			doc
 				.fontSize(14)
@@ -393,18 +405,23 @@ const downloadPDF = async (req, res) => {
 		doc.end();
 
 		writeStream.on("finish", () => {
+			console.log("✅ PDF file generated:", filePath);
+
 			res.download(filePath, "expenses.pdf", (err) => {
 				if (err) {
-					console.error("File Download Error:", err);
+					console.error("❌ File Download Error:", err);
 					return res.status(500).json({ message: "Error downloading file" });
 				}
-				fs.unlinkSync(filePath); // Delete file after sending
+				fs.unlinkSync(filePath); // ✅ Delete file after sending
+				console.log("🗑️ File deleted after sending.");
 			});
 		});
 	} catch (error) {
+		console.error("🚨 Error:", error);
 		res.status(500).json({ message: "Error generating PDF file", error });
 	}
 };
+
 
 module.exports = {
 	createExpense,
