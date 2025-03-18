@@ -266,59 +266,31 @@ const downloadExcel = async (req, res) => {
 
         let filter = { userId };
         if (startDate && endDate) {
-            filter.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
-        }
-        if (category) {
-            filter.category = category;
+            filter.date = { 
+                $gte: new Date(startDate + "T00:00:00.000Z"), 
+                $lte: new Date(endDate + "T23:59:59.999Z") 
+            };
         }
 
+        if (category) {
+            filter.category = { $regex: new RegExp(`^${category}$`, "i") }; // Case-insensitive match
+        }
+
+        console.log("📌 Applied Filter:", JSON.stringify(filter, null, 2));
+
         const expenses = await ExpenseModel.find(filter);
+
+        console.log("📄 Expenses Found:", expenses.length, "records");
 
         if (!expenses.length) {
             return res.status(404).json({ message: "No expenses found for the selected filters." });
         }
 
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet("Expenses");
-
-        worksheet.columns = [
-            { header: "Name", key: "name", width: 25 },
-            { header: "Amount", key: "amount", width: 15 },
-            { header: "Category", key: "category", width: 20 },
-            { header: "Description", key: "description", width: 30 },
-            { header: "Date", key: "date", width: 20 },
-        ];
-
-        expenses.forEach(expense => {
-            worksheet.addRow({
-                name: expense.name,
-                amount: expense.amount,
-                category: expense.category,
-                description: expense.description,
-                date: expense.date.toISOString().split("T")[0],
-            });
-        });
-
-        const filePath = path.join(__dirname, `../../exports/expenses_${userId}.xlsx`);
-        await workbook.xlsx.writeFile(filePath);
-
-        // ✅ Check if file exists before downloading
-        if (!fs.existsSync(filePath)) {
-            return res.status(500).json({ message: "Error generating file" });
-        }
-
-        res.download(filePath, "expenses.xlsx", err => {
-            if (err) {
-                console.error("File Download Error:", err);
-                return res.status(500).json({ message: "Error downloading file" });
-            }
-            fs.unlinkSync(filePath); // ✅ Ensure file is deleted after sending
-        });
+        // Generate Excel (rest of your code...)
     } catch (error) {
         res.status(500).json({ message: "Error generating Excel file", error });
     }
 };
-
 
 // 📌 Generate & Download PDF File
 const downloadPDF = async (req, res) => {

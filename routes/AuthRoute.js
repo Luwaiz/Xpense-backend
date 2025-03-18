@@ -11,8 +11,8 @@ const {
 	resetPassword,
 } = require("../controllers/AuthController");
 const express = require("express");
-const authMiddleware = require("../middlewares/authMiddlewares");
 const router = express.Router();
+const authMiddleware = require("../middlewares/authMiddlewares");
 
 router.post("/register", userSignUp);
 router.post("/login", userLogIn);
