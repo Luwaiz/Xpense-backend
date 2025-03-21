@@ -25,6 +25,9 @@ const UserSchema = mongoose.Schema(
 			type: "string",
 			default: "",
 		},
+		pushToken: {
+			type: "string", // Firebase Cloud Messaging token
+		},
 		resetCode: { type: "string" }, // OTP
 		resetCodeExpires: { type: "date" }, // Expiry time
 	},
