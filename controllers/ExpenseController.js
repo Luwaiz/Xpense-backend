@@ -60,6 +60,12 @@ const createExpense = async (req, res, next) => {
 				const user = await User.findById(userId);
 				const pushToken = user?.pushToken;
 
+				// ✅ Debugging logs
+				console.log(
+					`💰 Budget Updated: Spent = ${budget.spent}, Limit = ${budget.limit}`
+				);
+				console.log(`🔔 Push Token: ${pushToken}`);
+
 				// ✅ Send notifications if budget limit is exceeded
 				if (pushToken) {
 					if (
