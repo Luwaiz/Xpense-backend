@@ -300,6 +300,26 @@ const updateUser = async (req, res) => {
 	}
 };
 
+const saveToken = async (req, res) => {
+	try {
+	  const { pushToken } = req.body;
+	  const userId = req.user.userId; // Get user from authentication middleware
+  
+	  if (!pushToken) {
+		return res.status(400).json({ message: "Push token is required." });
+	  }
+  
+	  // ✅ Update user's push token
+	  await User.findByIdAndUpdate(userId, { pushToken });
+  
+	  res.json({ message: "Push token saved successfully." });
+	} catch (error) {
+	  console.error("Error saving push token:", error);
+	  res.status(500).json({ message: "Internal server error" });
+	}
+  }
+  
+
 module.exports = {
 	userSignUp,
 	userLogIn,
@@ -309,6 +329,7 @@ module.exports = {
 	getProfile,
 	updateUser,
 	forgotPassword,
-    verifyResetCode,
-    resetPassword,
+	verifyResetCode,
+	resetPassword,
+	saveToken,
 };

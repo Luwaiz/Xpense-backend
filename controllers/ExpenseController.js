@@ -5,6 +5,22 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 
+
+const sendPushNotification = async (pushToken, title, body) => {
+	try {
+		await axios.post("https://exp.host/--/api/v2/push/send", {
+			to: pushToken,
+			sound: "default",
+			title,
+			body,
+			data: { withSome: "data" },
+		});
+		console.log(`📢 Notification sent: ${title}`);
+	} catch (error) {
+		console.error("❌ Error sending push notification:", error);
+	}
+};
+
 const createExpense = async (req, res, next) => {
 	try {
 		const { name, amount, category, description, date, budgetId } = req.body;
@@ -18,6 +34,7 @@ const createExpense = async (req, res, next) => {
 
 		const expenseAmount = parseFloat(amount);
 
+		// ✅ Save Expense
 		const newExpense = new ExpenseModel({
 			userId,
 			name,
@@ -30,12 +47,38 @@ const createExpense = async (req, res, next) => {
 
 		await newExpense.save();
 
+		// ✅ Check Budget
 		if (budgetId) {
 			let budget = await BudgetModel.findOne({ _id: budgetId, userId });
 
 			if (budget) {
 				budget.spent += expenseAmount;
 				await budget.save();
+
+				// ✅ Get user push token
+				const user = await User.findById(userId);
+				const pushToken = user?.pushToken;
+
+				// ✅ Send notifications if budget limit is exceeded
+				if (pushToken) {
+					if (
+						budget.spent >= budget.limit * 0.5 &&
+						budget.spent < budget.limit
+					) {
+						await sendPushNotification(
+							pushToken,
+							"⚠️ Budget Alert",
+							`You've used 50% of your budget for ${category}.`
+						);
+					}
+					if (budget.spent >= budget.limit) {
+						await sendPushNotification(
+							pushToken,
+							"🚨 Budget Exceeded!",
+							`You've exceeded your budget for ${category}!`
+						);
+					}
+				}
 			} else {
 				console.warn(`Budget not found with ID: ${budgetId}`);
 			}
@@ -45,7 +88,8 @@ const createExpense = async (req, res, next) => {
 			.status(201)
 			.json({ message: "Expense created successfully.", expense: newExpense });
 	} catch (error) {
-		next(error);
+		console.error("❌ Error adding expense:", error);
+		res.status(500).json({ message: "Error adding expense" });
 	}
 };
 
@@ -376,7 +420,10 @@ const downloadPDF = async (req, res) => {
 
 		// ✅ Create PDF Document
 		const doc = new PDFDocument();
-		const filePath = path.join(__dirname, `../../exports/expenses_${userId}.pdf`);
+		const filePath = path.join(
+			__dirname,
+			`../../exports/expenses_${userId}.pdf`
+		);
 		const writeStream = fs.createWriteStream(filePath);
 		doc.pipe(writeStream);
 
@@ -421,6 +468,7 @@ const downloadPDF = async (req, res) => {
 		res.status(500).json({ message: "Error generating PDF file", error });
 	}
 };
+
 
 
 module.exports = {
