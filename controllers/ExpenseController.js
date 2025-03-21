@@ -5,7 +5,7 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 const User = require("../models/UserModel");
-
+const { default: axios } = require("axios");
 
 const sendPushNotification = async (pushToken, title, body) => {
 	try {
@@ -469,8 +469,6 @@ const downloadPDF = async (req, res) => {
 		res.status(500).json({ message: "Error generating PDF file", error });
 	}
 };
-
-
 
 module.exports = {
 	createExpense,
