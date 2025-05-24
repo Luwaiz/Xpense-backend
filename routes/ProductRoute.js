@@ -5,8 +5,9 @@ const {
 	getProducts,
 	getProductById,
 } = require("../controllers/ProductController");
+const upload = require("../middlewares/mutler");
 
-router.post("/create", createProduct); // Create
+router.post("/create", upload.single("image"), createProduct); // Create
 router.get("/getProducts", getProducts); // Get all
 router.get("/getProduct/:id", getProductById);
 
