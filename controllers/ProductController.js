@@ -3,10 +3,12 @@ const ProductModel = require("../models/ProductModel");
 const createProduct = async (req, res) => {
 	try {
 		const { name, price, description } = req.body;
+		const image = req.file ? req.file.filename : null;
 		const newProduct = new ProductModel({
 			name,
 			price,
 			description,
+			image,
 		});
 
 		await newProduct.save();
@@ -42,4 +44,4 @@ const getProductById = async (req, res) => {
 	}
 };
 
-module.exports = { createProduct, getProducts , getProductById};
+module.exports = { createProduct, getProducts, getProductById };

@@ -20,6 +20,8 @@ app.use("/api/auth", AuthRoute);
 app.use("/api/expense", ExpenseRoute);
 app.use("/api/budget", BudgetRoute);
 app.use("/api/products", ProductRoute);
+app.use("/uploads", express.static("uploads"));
+//app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 app.use(errorHandler);
 
 app.get("/", (req, res) => {
@@ -38,4 +40,4 @@ mongoose
 		console.log(e);
 	});
 
-	module.exports = app
+module.exports = app;
