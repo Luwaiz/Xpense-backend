@@ -7,6 +7,7 @@ const ExpenseRoute = require("./routes/ExpenseRoute");
 const BudgetRoute = require("./routes/BudgetRoute");
 const ProductRoute = require("./routes/ProductRoute");
 const errorHandler = require("./middlewares/errorHandler");
+const path = require("path");
 dotenv.config();
 
 const app = express();
@@ -20,8 +21,7 @@ app.use("/api/auth", AuthRoute);
 app.use("/api/expense", ExpenseRoute);
 app.use("/api/budget", BudgetRoute);
 app.use("/api/products", ProductRoute);
-app.use("/uploads", express.static("uploads"));
-//app.use("/uploads", express.static(path.join(__dirname, "uploads")))
+app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 app.use(errorHandler);
 
 app.get("/", (req, res) => {
